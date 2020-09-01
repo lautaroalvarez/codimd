@@ -154,7 +154,8 @@
      * will be replaced by the urlText, the {filename} tag will be replaced
      * by the filename that has been returned by the server
      */
-    urlText: "![]({filename})",
+    urlText: "[link]({filename})",
+    urlImgText: "![]({filename})",
 
     /**
      * Text which will be used when uploading has failed
@@ -265,7 +266,7 @@
     xhr.onload = function() {
       // If HTTP status is OK or Created
       if (xhr.status === 200 || xhr.status === 201) {
-        me.onFileUploadResponse(xhr, id);
+        me.onFileUploadResponse(xhr, id, file.type);
       } else {
         me.onFileUploadError(xhr, id);
       }
@@ -295,23 +296,23 @@
    * @param  {XMLHttpRequest} xhr
    * @return {Void}
    */
-  inlineAttachment.prototype.onFileUploadResponse = function(xhr, id) {
+  inlineAttachment.prototype.onFileUploadResponse = function(xhr, id, fileType) {
     if (this.settings.onFileUploadResponse.call(this, xhr) !== false) {
       var result = JSON.parse(xhr.responseText),
         filename = result[this.settings.jsonFieldName];
 
       if (result && filename) {
-          var replacements = [];
-          var string = this.settings.progressText.replace(this.filenameTag, id);
-          var lines = this.editor.getValue().split('\n');
-        var newValue = this.settings.urlText.replace(this.filenameTag, filename);
-          for(var i = 0; i < lines.length; i++) {
-            var ch = lines[i].indexOf(string);
-            if(ch != -1)
-                replacements.push({replacement:newValue, from:{line:i, ch:ch}, to:{line:i, ch:ch + string.length}});
+        var replacements = [];
+        var string = this.settings.progressText.replace(this.filenameTag, id);
+        var lines = this.editor.getValue().split('\n');
+        var newValue = this.insertionText(filename, fileType);
+        for(var i = 0; i < lines.length; i++) {
+          var ch = lines[i].indexOf(string);
+          if(ch != -1)
+            replacements.push({replacement:newValue, from:{line:i, ch:ch}, to:{line:i, ch:ch + string.length}});
         }
-          for(var i = 0; i < replacements.length; i++)
-            this.editor.replaceRange(replacements[i]);
+        for(var i = 0; i < replacements.length; i++)
+          this.editor.replaceRange(replacements[i]);
       }
     }
   };
@@ -403,6 +404,13 @@
 
     return result;
   };
+
+  inlineAttachment.prototype.insertionText = function(filename, fileType) {
+    if (fileType.includes('image')) {
+      return this.settings.urlImgText.replace(this.filenameTag, filename);
+    }
+    return this.settings.urlText.replace(this.filenameTag, filename);
+  }
 
   window.inlineAttachment = inlineAttachment;
 
